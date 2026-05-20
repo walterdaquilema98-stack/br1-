@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INDUSTRIA-QC SYS v4.0 — Control de Calidad Ultra-Realista</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#060a0f;
+  --panel:#0a1018;
+  --border:#1a2d42;
+  --nblue:#00aaff;
+  --ngreen:#00ff88;
+  --nred:#ff3322;
+  --nyel:#ffcc00;
+  --npurp:#cc88ff;
+}
+body{background:var(--bg);font-family:'Share Tech Mono',monospace;color:#7aaccc;min-height:100vh;padding:6px;overflow-x:hidden;}
+.wrap{max-width:1200px;margin:0 auto;}
+
+/* HMI HEADER */
+.hdr{
+  background:linear-gradient(180deg,#0b1728 0%,#060f1c 100%);
+  border:1px solid var(--border);border-bottom:2px solid var(--nblue);
+  border-radius:6px 6px 0 0;padding:7px 14px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:relative;overflow:hidden;
+}
+.hdr::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--nblue),transparent);}
+.hdr::after{content:'';position:absolute;bottom:-1px;left:20%;right:20%;height:2px;background:var(--nblue);box-shadow:0 0 12px var(--nblue),0 0 24px rgba(0,170,255,.4);}
+.brand-main{color:var(--nblue);font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:700;letter-spacing:4px;}
+.brand-sub{color:#3a6a8a;font-size:8px;letter-spacing:2px;margin-top:1px;}
+.stat-row{display:flex;gap:18px;}
+.stat-g{display:flex;flex-direction:column;align-items:center;}
+.stat-v{font-size:20px;font-weight:bold;line-height:1;}
+.stat-l{color:#3a5a7a;font-size:7px;letter-spacing:1px;margin-top:2px;}
+.hdr-r{display:flex;flex-direction:column;align-items:flex-end;gap:3px;}
+.clock{color:var(--nblue);font-size:22px;font-weight:bold;letter-spacing:3px;}
+.led-row{display:flex;gap:10px;}
+.led-item{display:flex;align-items:center;gap:3px;font-size:8px;color:#3a5a7a;}
+.led{width:7px;height:7px;border-radius:50%;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+/* CANVAS */
+canvas{display:block;width:100%;height:680px;background:var(--bg);border-left:1px solid var(--border);border-right:1px solid var(--border);}
+
+/* HMI BOTTOM */
+.hmi-bot{
+  background:linear-gradient(0deg,#0b1728 0%,#060f1c 100%);
+  border:1px solid var(--border);border-top:2px solid var(--nblue);
+  border-radius:0 0 6px 6px;padding:9px 12px;
+}
+.panel-grid{display:flex;flex-wrap:wrap;gap:7px;align-items:flex-start;}
+.mod{background:#08101a;border:1px solid var(--border);border-radius:4px;padding:7px 9px;position:relative;}
+.mod::before{content:'';position:absolute;top:0;left:10px;right:10px;height:1px;background:linear-gradient(90deg,transparent,rgba(0,170,255,.25),transparent);}
+.mod-t{color:var(--nblue);font-size:7px;letter-spacing:2px;text-transform:uppercase;margin-bottom:5px;opacity:.75;}
+.brow{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:3px;}
+button{padding:4px 9px;font-size:8px;border:1px solid var(--border);background:#08101a;color:#4a96dd;border-radius:3px;cursor:pointer;transition:all .12s;font-weight:bold;text-transform:uppercase;letter-spacing:1px;font-family:'Share Tech Mono',monospace;}
+button:hover{background:#142033;border-color:var(--nblue);}
+button.on{background:#001c0e;border-color:var(--ngreen);color:var(--ngreen);}
+button.off{background:#150606;border-color:var(--nred);color:var(--nred);}
+.srow{display:flex;align-items:center;gap:5px;margin-top:3px;}
+.slbl{color:#3a5a7a;font-size:7px;letter-spacing:1px;}
+input[type=range]{width:70px;height:3px;cursor:pointer;accent-color:var(--nblue);}
+.sval{color:var(--nblue);font-size:9px;font-weight:bold;min-width:22px;}
+.sflex{display:flex;gap:4px;flex-wrap:wrap;}
+.sc{background:#060e18;border:1px solid var(--border);border-radius:3px;padding:4px 7px;text-align:center;min-width:50px;position:relative;}
+.sc::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;}
+.sc.cg::after{background:var(--ngreen);}
+.sc.cr::after{background:var(--nred);}
+.sc.cb::after{background:var(--nblue);}
+.sc.cy::after{background:var(--nyel);}
+.sc.cp::after{background:var(--npurp);}
+.sc-l{color:#2a4a6a;font-size:6px;letter-spacing:.5px;text-transform:uppercase;}
+.sc-v{font-size:15px;font-weight:bold;line-height:1.3;margin-top:1px;}
+.alarm{display:none;margin-top:5px;padding:4px 9px;background:#120404;border:1px solid var(--nred);border-radius:3px;color:var(--nred);font-size:8px;letter-spacing:1px;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.2;}}
+.alarm.show{display:block;animation:blink .4s infinite;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="hdr">
+  <div>
+    <div class="brand-main">◈ INDUSTRIA-QC SYS v4.0</div>
+    <div class="brand-sub">SISTEMA DE CONTROL DE CALIDAD INDUSTRIAL — LÍNEA Nº1 — ULTRA REALISTA</div>
+  </div>
+  <div class="stat-row">
+    <div class="stat-g"><div class="stat-v" id="cOk" style="color:var(--ngreen)">0</div><div class="stat-l">APROBADAS</div></div>
+    <div class="stat-g"><div class="stat-v" id="cDef" style="color:var(--nred)">0</div><div class="stat-l">RECHAZADAS</div></div>
+    <div class="stat-g"><div class="stat-v" id="cBand" style="color:var(--nyel)">0</div><div class="stat-l">EN LÍNEA</div></div>
+  </div>
+  <div class="hdr-r">
+    <div class="clock" id="clock">00:00:00</div>
+    <div style="color:#3a5a7a;font-size:8px" id="dateStr">SISTEMA ACTIVO</div>
+    <div class="led-row">
+      <div class="led-item"><div class="led" id="ledBanda" style="background:var(--ngreen);box-shadow:0 0 6px var(--ngreen)"></div>BANDA</div>
+      <div class="led-item"><div class="led" id="ledServo" style="background:var(--ngreen);box-shadow:0 0 6px var(--ngreen)"></div>SERVO</div>
+      <div class="led-item"><div class="led" id="ledSensor" style="background:var(--nblue);box-shadow:0 0 6px var(--nblue)"></div>SENSOR</div>
+      <div class="led-item"><div class="led" id="ledBrazo" style="background:var(--ngreen);box-shadow:0 0 6px var(--ngreen)"></div>BRAZO</div>
+    </div>
+  </div>
+</div>
+
+<canvas id="c"></canvas>
+
+<div class="hmi-bot">
+  <div class="panel-grid">
+    <div class="mod">
+      <div class="mod-t">PLC — Control Banda</div>
+      <div class="brow">
+        <button id="btnB" class="on" onclick="toggleBand()">▶ MARCHA</button>
+        <button onclick="spawnFig()" style="border-color:var(--nyel);color:var(--nyel)">⊕ PIEZA</button>
+        <button onclick="resetAll()">↺ RESET</button>
+      </div>
+      <div class="srow">
+        <span class="slbl">FREC.Hz:</span>
+        <input type="range" id="spd" min="0.3" max="3" step="0.1" value="1" oninput="setSpd(this.value)">
+        <span class="sval" id="spdv">1.0</span>
+      </div>
+    </div>
+    <div class="mod">
+      <div class="mod-t">Producción</div>
+      <div class="sflex">
+        <div class="sc cg"><div class="sc-l">✅ OK</div><div class="sc-v" id="cOk2" style="color:var(--ngreen)">0</div></div>
+        <div class="sc cr"><div class="sc-l">⛔ DEF</div><div class="sc-v" id="cDef2" style="color:var(--nred)">0</div></div>
+        <div class="sc cb"><div class="sc-l">LÍNEA</div><div class="sc-v" id="cBand2" style="color:var(--nblue)">0</div></div>
+      </div>
+    </div>
+    <div class="mod">
+      <div class="mod-t">Clasificación RGB</div>
+      <div class="sflex">
+        <div class="sc cr"><div class="sc-l">🔴 ROJO</div><div class="sc-v" id="cR" style="color:#ff5544">0</div></div>
+        <div class="sc cb"><div class="sc-l">🔵 AZUL</div><div class="sc-v" id="cBl" style="color:#55aaff">0</div></div>
+        <div class="sc cy"><div class="sc-l">🟡 AMAR</div><div class="sc-v" id="cY" style="color:var(--nyel)">0</div></div>
+      </div>
+    </div>
+    <div class="mod">
+      <div class="mod-t">Brazo Robótico R-6</div>
+      <div class="brow"><button id="btnA" class="on" onclick="toggleArm()">▶ ACTIVO</button></div>
+      <div class="sflex" style="margin-top:4px">
+        <div class="sc cp"><div class="sc-l">ESTADO</div><div class="sc-v" id="armSt" style="color:var(--npurp);font-size:8px;margin-top:3px">REPOSO</div></div>
+        <div class="sc cp"><div class="sc-l">CICLOS</div><div class="sc-v" id="armCyc" style="color:var(--npurp)">0</div></div>
+      </div>
+    </div>
+    <div class="mod">
+      <div class="mod-t">Velocidad banda</div>
+      <div class="sflex">
+        <div class="sc cb"><div class="sc-l">RPM</div><div class="sc-v" id="rpmVal" style="color:var(--nblue)">60</div></div>
+        <div class="sc cg"><div class="sc-l">m/min</div><div class="sc-v" id="msVal" style="color:var(--ngreen)">3.1</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="alarm" id="alarmBar">⚠ ALARMA — PIEZA DEFECTUOSA DETECTADA — SERVO M1 ACTIVADO</div>
+</div>
+
+</div>
+<script>
+// ════════════════════════════════════════════
+// CANVAS SETUP
+// ════════════════════════════════════════════
+const CV=document.getElementById('c'),ctx=CV.getContext('2d');
+let W,H;
+
+// Band path points
+let bandPath=[];
+let bandOn=true,bandSpd=1,bandTime=0;
+let armOn=true;
+
+// Layout coordinates
+let x1,x2,yTop,yBot,bRad;
+let armBX,armBY;
+let binRed,binBlue,binYel;
+let gatePos={x:0,y:0};
+let sensorPos={x:0,y:0};
+let idxGate=0,idxSensor=0;
+let floorY=0;
+
+// State
+let figs=[],cOk=0,cDef=0,cR=0,cBl=0,cY=0,armCyc=0;
+let gate={open:false,angle:0,timer:0};
+const AL1=108,AL2=90;
+let arm={a1:Math.PI/2,ta1:Math.PI/2,elb:0.45,telb:0.45,grip:false,held:null,phase:'idle',timer:0,destBin:null};
+let runSec=0;
+
+setInterval(()=>{
+  runSec++;
+  const h=String(Math.floor(runSec/3600)).padStart(2,'0');
+  const m=String(Math.floor((runSec%3600)/60)).padStart(2,'0');
+  const s=String(runSec%60).padStart(2,'0');
+  document.getElementById('clock').textContent=`${h}:${m}:${s}`;
+  const rpm=Math.round(60*bandSpd);
+  const ms=(rpm*0.0524).toFixed(1);
+  setE('rpmVal',rpm);setE('msVal',ms);
+},1000);
+
+// ════════════════════════════════════════════
+// BUILD PATH
+// ════════════════════════════════════════════
+function buildPath(){
+  W=CV.width;H=CV.height;
+  bandPath=[];
+  x1=W*0.19;x2=W*0.81;
+  yTop=H*0.24;yBot=H*0.72;
+  bRad=58;
+  floorY=yBot+90;
+
+  let i=0;
+  // Left vertical down
+  for(let y=yTop;y<=yBot-bRad;y+=3){bandPath.push({x:x1,y});i++;}
+  // Bottom-left curve
+  for(let a=Math.PI;a<=Math.PI*1.5;a+=0.05){bandPath.push({x:x1+bRad+Math.cos(a)*bRad,y:yBot-bRad-Math.sin(a)*bRad});i++;}
+  const iBotS=i;
+  // Bottom horizontal
+  for(let x=x1+bRad;x<=x2-bRad;x+=3){bandPath.push({x,y:yBot});i++;}
+  idxGate=iBotS+Math.floor((i-iBotS)*0.38);
+  // Bottom-right curve
+  for(let a=Math.PI*1.5;a<=Math.PI*2;a+=0.05){bandPath.push({x:x2-bRad+Math.cos(a)*bRad,y:yBot-bRad-Math.sin(a)*bRad});i++;}
+  const iRS=i;
+  // Right vertical up
+  for(let y=yBot-bRad;y>=yTop;y-=3){bandPath.push({x:x2,y});i++;}
+  idxSensor=iRS+Math.floor((i-iRS)*0.42);
+
+  gatePos={...bandPath[idxGate]};
+  sensorPos={...bandPath[idxSensor]};
+  armBX=(x1+x2)/2;
+  armBY=yTop+(yBot-yTop)*0.50;
+
+  const biny=H*0.095;
+  binRed ={x:W*0.24,y:biny,color:'#ff3322',glow:'#ff5544',label:'ROJO',id:'cR'};
+  binBlue={x:W*0.50,y:biny,color:'#0099ff',glow:'#44bbff',label:'AZUL',id:'cBl'};
+  binYel ={x:W*0.76,y:biny,color:'#ffcc00',glow:'#ffe566',label:'AMAR',id:'cY'};
+}
+
+function resize(){CV.width=CV.offsetWidth;CV.height=CV.offsetHeight;buildPath();}
+window.addEventListener('resize',resize);
+resize();
+
+// ════════════════════════════════════════════
+// FIGURES
+// ════════════════════════════════════════════
+const SHAPES=['square','circle','triangle','star','hexagon','diamond','pentagon'];
+const REDS=['#ff3322','#ff5544','#ff6633','#ee2200','#ff4455'];
+const BLUES=['#0099ff','#2288ff','#00aaee','#3366ff','#55aaff'];
+const YELLOWS=['#ffcc00','#ffdd22','#aadd00','#ffbb11','#ddee00'];
+function rCol(){return[...REDS,...BLUES,...YELLOWS][Math.floor(Math.random()*15)];}
+function colP(c){if(REDS.includes(c))return'red';if(BLUES.includes(c))return'blue';return'yellow';}
+function binFor(p){return p==='red'?binRed:p==='blue'?binBlue:binYel;}
+
+function drawShape(c,t,sz){
+  switch(t){
+    case'square':c.rect(-sz/2,-sz/2,sz,sz);break;
+    case'circle':c.arc(0,0,sz/2,0,Math.PI*2);break;
+    case'triangle':c.moveTo(0,-sz*.62);c.lineTo(sz*.54,sz*.44);c.lineTo(-sz*.54,sz*.44);c.closePath();break;
+    case'pentagon':for(let k=0;k<5;k++){const a=k*Math.PI*2/5-Math.PI/2;k?c.lineTo(Math.cos(a)*sz*.54,Math.sin(a)*sz*.54):c.moveTo(Math.cos(a)*sz*.54,Math.sin(a)*sz*.54);}c.closePath();break;
+    case'star':for(let k=0;k<5;k++){const ao=k*Math.PI*2/5-Math.PI/2,ai=ao+Math.PI/5;k?c.lineTo(Math.cos(ao)*sz*.55,Math.sin(ao)*sz*.55):c.moveTo(Math.cos(ao)*sz*.55,Math.sin(ao)*sz*.55);c.lineTo(Math.cos(ai)*sz*.22,Math.sin(ai)*sz*.22);}c.closePath();break;
+    case'hexagon':for(let k=0;k<6;k++){const a=k*Math.PI/3-Math.PI/6;k?c.lineTo(Math.cos(a)*sz*.5,Math.sin(a)*sz*.5):c.moveTo(Math.cos(a)*sz*.5,Math.sin(a)*sz*.5);}c.closePath();break;
+    case'diamond':c.moveTo(0,-sz*.63);c.lineTo(sz*.43,0);c.lineTo(0,sz*.63);c.lineTo(-sz*.43,0);c.closePath();break;
+  }
+}
+
+function drawFig(x,y,rot,shape,sz,col,deformed,alpha=1){
+  ctx.save();ctx.translate(x,y);ctx.rotate(rot);ctx.globalAlpha=alpha;
+  if(deformed){
+    ctx.beginPath();ctx.moveTo(-sz*.78,-sz*.26);ctx.lineTo(sz*.9,-sz*.52);ctx.lineTo(sz*.58,sz*.84);ctx.lineTo(-sz*.1,sz*.7);ctx.lineTo(-sz*.84,sz*.1);ctx.closePath();
+    ctx.fillStyle=col+'cc';ctx.shadowColor=col;ctx.shadowBlur=6;ctx.fill();
+    ctx.strokeStyle='#ff000099';ctx.lineWidth=2.5;ctx.stroke();
+    ctx.beginPath();ctx.moveTo(-sz*.28,-sz*.28);ctx.lineTo(sz*.28,sz*.28);ctx.strokeStyle='#ff0000aa';ctx.lineWidth=2;ctx.stroke();
+    ctx.beginPath();ctx.moveTo(sz*.28,-sz*.28);ctx.lineTo(-sz*.28,sz*.28);ctx.stroke();
+  } else {
+    ctx.fillStyle=col;ctx.shadowColor=col+'88';ctx.shadowBlur=9;
+    ctx.beginPath();drawShape(ctx,shape,sz);ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.28)';ctx.lineWidth=1.5;ctx.stroke();
+    ctx.beginPath();drawShape(ctx,shape,sz*.65);ctx.fillStyle='rgba(255,255,255,.07)';ctx.fill();
+    ctx.font=`bold ${sz*.26}px monospace`;ctx.fillStyle='rgba(0,0,0,.35)';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(shape.substring(0,2).toUpperCase(),0,sz*.07);
+  }
+  ctx.restore();
+}
+
+class Figure{
+  constructor(){
+    this.prog=0;this.sz=20;this.rot=Math.random()*Math.PI*2;
+    this.shape=SHAPES[Math.floor(Math.random()*SHAPES.length)];
+    this.deformed=Math.random()<0.30;
+    this.color=rCol();this.primary=colP(this.color);
+    this.gateOk=false;this.colorOk=false;
+    this.ejected=false;this.classified=false;this.held=false;this.done=false;
+    this.ex=0;this.ey=0;this.evx=0;this.evy=0;this.ea=1;this.erot=0;this.erotv=(Math.random()-.5)*.2;
+  }
+  getIdx(){return Math.min(Math.floor(this.prog*(bandPath.length-1)),bandPath.length-1);}
+  getPos(){return bandPath[this.getIdx()]||{x:0,y:0};}
+  update(dt){
+    if(this.held||this.classified)return;
+    if(this.ejected){this.ex+=this.evx*dt*60;this.ey+=this.evy*dt*60;this.evy+=0.2;this.evx*=.985;this.ea-=dt*1.3;this.erot+=this.erotv;return;}
+    if(this.done)return;
+    if(bandOn){this.prog+=0.00044*bandSpd;this.rot+=0.01;}
+    if(this.prog>=1)this.done=true;
+  }
+  draw(){
+    if(this.classified)return;
+    if(this.ejected){if(this.ea>0)drawFig(this.ex,this.ey,this.erot,this.shape,this.sz,this.color,this.deformed,Math.max(0,this.ea));return;}
+    if(this.done||this.held)return;
+    const p=this.getPos();drawFig(p.x,p.y,this.rot,this.shape,this.sz,this.color,this.deformed);
+  }
+}
+
+// ════════════════════════════════════════════
+// DRAWING UTILITIES
+// ════════════════════════════════════════════
+function mGrad(x0,y0,x1p,y1p,c0='#0e1825',c1='#1e3552',c2='#28415e'){
+  const g=ctx.createLinearGradient(x0,y0,x1p,y1p);
+  g.addColorStop(0,c0);g.addColorStop(.38,c1);g.addColorStop(.65,c2);g.addColorStop(1,c0);
+  return g;
+}
+
+function drawBolt(x,y,r=5){
+  ctx.save();
+  ctx.fillStyle='rgba(0,0,0,.5)';ctx.beginPath();ctx.arc(x+1,y+1,r,0,Math.PI*2);ctx.fill();
+  const g=ctx.createRadialGradient(x-r*.3,y-r*.3,0,x,y,r);
+  g.addColorStop(0,'#4a6a8c');g.addColorStop(.55,'#22384e');g.addColorStop(1,'#0a1520');
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='rgba(0,0,0,.5)';ctx.lineWidth=.6;ctx.stroke();
+  ctx.strokeStyle='#0a1520aa';ctx.lineWidth=1.2;
+  ctx.beginPath();ctx.moveTo(x-r*.58,y);ctx.lineTo(x+r*.58,y);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x,y-r*.58);ctx.lineTo(x,y+r*.58);ctx.stroke();
+  ctx.restore();
+}
+
+// Structural I-beam
+function iBeam(ax,ay,bx,by,w=12){
+  const dx=bx-ax,dy=by-ay,len=Math.sqrt(dx*dx+dy*dy),nx=-dy/len,ny=dx/len;
+  ctx.save();
+  // Shadow
+  ctx.fillStyle='rgba(0,0,0,.55)';
+  ctx.beginPath();ctx.moveTo(ax+nx*w+2,ay+ny*w+2);ctx.lineTo(bx+nx*w+2,by+ny*w+2);ctx.lineTo(bx-nx*w+2,by-ny*w+2);ctx.lineTo(ax-nx*w+2,ay-ny*w+2);ctx.closePath();ctx.fill();
+  // Flange top
+  ctx.fillStyle=mGrad(ax,ay,ax+nx*w*2,ay+ny*w*2);
+  ctx.beginPath();ctx.moveTo(ax+nx*w,ay+ny*w);ctx.lineTo(bx+nx*w,by+ny*w);ctx.lineTo(bx-nx*w,by-ny*w);ctx.lineTo(ax-nx*w,ay-ny*w);ctx.closePath();ctx.fill();
+  // Web (center darker strip)
+  ctx.fillStyle='#0c1825cc';
+  ctx.beginPath();ctx.moveTo(ax+nx*(w*.35),ay+ny*(w*.35));ctx.lineTo(bx+nx*(w*.35),by+ny*(w*.35));ctx.lineTo(bx-nx*(w*.35),by-ny*(w*.35));ctx.lineTo(ax-nx*(w*.35),ay-ny*(w*.35));ctx.closePath();ctx.fill();
+  // Highlight edges
+  ctx.strokeStyle='#2a4a6a55';ctx.lineWidth=.8;
+  ctx.beginPath();ctx.moveTo(ax+nx*w,ay+ny*w);ctx.lineTo(bx+nx*w,by+ny*w);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(ax-nx*w,ay-ny*w);ctx.lineTo(bx-nx*w,by-ny*w);ctx.stroke();
+  ctx.restore();
+}
+
+// Pipe/cable conduit
+function pipe(ax,ay,bx,by,w=5,col='#1a304c'){
+  const dx=bx-ax,dy=by-ay,len=Math.sqrt(dx*dx+dy*dy),nx=-dy/len,ny=dx/len;
+  ctx.save();
+  ctx.fillStyle='rgba(0,0,0,.4)';
+  ctx.beginPath();ctx.moveTo(ax+nx*w+1,ay+ny*w+1);ctx.lineTo(bx+nx*w+1,by+ny*w+1);ctx.lineTo(bx-nx*w+1,by-ny*w+1);ctx.lineTo(ax-nx*w+1,ay-ny*w+1);ctx.closePath();ctx.fill();
+  const pg=ctx.createLinearGradient(ax-nx*w,ay-ny*w,ax+nx*w,ay+ny*w);
+  pg.addColorStop(0,'#07121e');pg.addColorStop(.38,col);pg.addColorStop(.55,'#223a52');pg.addColorStop(1,'#07121e');
+  ctx.fillStyle=pg;
+  ctx.beginPath();ctx.moveTo(ax+nx*w,ay+ny*w);ctx.lineTo(bx+nx*w,by+ny*w);ctx.lineTo(bx-nx*w,by-ny*w);ctx.lineTo(ax-nx*w,ay-ny*w);ctx.closePath();ctx.fill();
+  ctx.restore();
+}
+
+function drawRoller(cx,cy,R,rot=0){
+  ctx.save();ctx.translate(cx,cy);
+  ctx.shadowColor='rgba(0,0,0,.6)';ctx.shadowBlur=7;ctx.shadowOffsetY=3;
+  // Outer flange ring
+  const og=ctx.createRadialGradient(-R*.28,-R*.28,0,0,0,R);
+  og.addColorStop(0,'#4a6a8c');og.addColorStop(.45,'#1e3250');og.addColorStop(1,'#0a1520');
+  ctx.fillStyle=og;ctx.beginPath();ctx.arc(0,0,R,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+  ctx.strokeStyle='#2a4468';ctx.lineWidth=2.5;ctx.stroke();
+  // Rubber belt surface layer
+  ctx.strokeStyle='#111e2e';ctx.lineWidth=R*.28;ctx.beginPath();ctx.arc(0,0,R*.82,0,Math.PI*2);ctx.stroke();
+  // Knurling texture on rubber
+  ctx.strokeStyle='rgba(30,50,70,.55)';ctx.lineWidth=R*.08;
+  for(let k=0;k<8;k++){const a=k*Math.PI/4+rot;ctx.beginPath();ctx.arc(0,0,R*.82,a,a+Math.PI/8);ctx.stroke();}
+  // Spokes
+  ctx.rotate(rot);
+  for(let k=0;k<6;k++){
+    const a=k*Math.PI/3;
+    ctx.strokeStyle='#1e3450';ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.moveTo(Math.cos(a)*R*.28,Math.sin(a)*R*.28);ctx.lineTo(Math.cos(a)*R*.72,Math.sin(a)*R*.72);ctx.stroke();
+    // Spoke cap
+    ctx.fillStyle='#2a3e56';ctx.beginPath();ctx.arc(Math.cos(a)*R*.72,Math.sin(a)*R*.72,3,0,Math.PI*2);ctx.fill();
+  }
+  // Hub bearing
+  const hg=ctx.createRadialGradient(-3,-3,0,0,0,10);
+  hg.addColorStop(0,'#6a8aac');hg.addColorStop(.5,'#1a2e42');hg.addColorStop(1,'#0a1520');
+  ctx.fillStyle=hg;ctx.beginPath();ctx.arc(0,0,10,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#2a4468';ctx.lineWidth=1.5;ctx.stroke();
+  drawBolt(0,0,4.5);
+  ctx.restore();
+}
+
+// ════════════════════════════════════════════
+// DRAW CONVEYOR — ultra-detailed with full frame & legs
+// ════════════════════════════════════════════
+function strokePath(){
+  ctx.beginPath();ctx.moveTo(bandPath[0].x,bandPath[0].y);
+  for(let i=1;i<bandPath.length;i++)ctx.lineTo(bandPath[i].x,bandPath[i].y);
+  ctx.stroke();
+}
+
+function drawConveyor(){
+  if(!bandPath.length)return;
+
+  ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
+
+  // ── STRUCTURAL OUTER FRAME (painted steel) ──
+  // Drop shadow
+  ctx.strokeStyle='rgba(0,0,0,.75)';ctx.lineWidth=90;strokePath();
+  // Outer painted frame — olive-grey industrial color
+  ctx.strokeStyle='#192838';ctx.lineWidth=82;strokePath();
+  // Frame surface with slight gradient feel
+  ctx.strokeStyle='#1e3248';ctx.lineWidth=76;strokePath();
+  // Inner recess
+  ctx.strokeStyle='#0c1822';ctx.lineWidth=68;strokePath();
+  // Belt surface (dark rubber)
+  ctx.strokeStyle='#0f1c28';ctx.lineWidth=60;strokePath();
+
+  // Belt texture — moving ribs
+  ctx.strokeStyle='rgba(25,48,68,.7)';ctx.lineWidth=56;
+  ctx.setLineDash([5,15]);ctx.lineDashOffset=-bandTime*bandSpd*32;strokePath();ctx.setLineDash([]);
+  // Belt edge ridges
+  ctx.strokeStyle='rgba(18,35,50,.8)';ctx.lineWidth=50;
+  ctx.setLineDash([10,6]);ctx.lineDashOffset=-bandTime*bandSpd*22;strokePath();ctx.setLineDash([]);
+
+  // Center guide channel
+  ctx.strokeStyle='#070f18';ctx.lineWidth=12;strokePath();
+  ctx.strokeStyle='#0a1520';ctx.lineWidth=8;strokePath();
+
+  // Outer frame bevel / chamfer lines
+  ctx.strokeStyle='#223448';ctx.lineWidth=4;strokePath();
+  ctx.strokeStyle='rgba(0,130,200,.09)';ctx.lineWidth=2;strokePath();
+
+  // Frame edge highlight (top/side facing)
+  ctx.strokeStyle='rgba(50,100,140,.18)';ctx.lineWidth=1.2;strokePath();
+
+  ctx.restore();
+
+  // ── SIDE GUARD RAILS ──
+  drawGuardRails();
+  // ── FRAME CROSS-RIBS ──
+  drawFrameRibs();
+  // ── CONVEYOR LEGS ──
+  drawConveyorLegs();
+  // ── EDGE ROLLERS (visible between belt and frame) ──
+  drawEdgeRollers();
+  // ── DRIVE PULLEYS at both ends ──
+  drawDrivePulleys();
+  // ── CABLE TRAYS under frame ──
+  drawCableTrays();
+  // ── ENTRY/EXIT LABELS ──
+  ctx.font='bold 9px "Share Tech Mono"';ctx.textAlign='center';
+  ctx.fillStyle='#00aaff';ctx.shadowColor='rgba(0,170,255,.55)';ctx.shadowBlur=7;
+  ctx.fillText('◄ ENTRADA',bandPath[0].x,bandPath[0].y-42);
+  ctx.fillText('SALIDA ►',bandPath[bandPath.length-1].x,bandPath[bandPath.length-1].y-42);
+  ctx.shadowBlur=0;
+}
+
+function drawGuardRails(){
+  // Build offset paths on both sides of band
+  const o=38;
+  const pts1=[],pts2=[];
+  for(let i=0;i<bandPath.length;i+=4){
+    const p=bandPath[i];
+    const p2=bandPath[Math.min(i+4,bandPath.length-1)];
+    const dx=p2.x-p.x,dy=p2.y-p.y,len=Math.sqrt(dx*dx+dy*dy)||1;
+    const nx=-dy/len,ny=dx/len;
+    pts1.push({x:p.x+nx*o,y:p.y+ny*o});
+    pts2.push({x:p.x-nx*o,y:p.y-ny*o});
+  }
+  [pts1,pts2].forEach(pts=>{
+    if(pts.length<2)return;
+    ctx.save();
+    // Shadow
+    ctx.strokeStyle='rgba(0,0,0,.55)';ctx.lineWidth=6;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(pts[0].x+1,pts[0].y+1);pts.slice(1).forEach(p=>ctx.lineTo(p.x+1,p.y+1));ctx.stroke();
+    // Main rail
+    ctx.strokeStyle='#182c3e';ctx.lineWidth=5;
+    ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);pts.slice(1).forEach(p=>ctx.lineTo(p.x,p.y));ctx.stroke();
+    // Top highlight
+    ctx.strokeStyle='#2a4a6a';ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);pts.slice(1).forEach(p=>ctx.lineTo(p.x,p.y));ctx.stroke();
+    ctx.strokeStyle='rgba(0,100,160,.15)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);pts.slice(1).forEach(p=>ctx.lineTo(p.x,p.y));ctx.stroke();
+    ctx.restore();
+    // Rail brackets (bolted to frame)
+    for(let k=0;k<pts.length;k+=10){
+      if(k>=pts.length)break;
+      const p=pts[k],pn=pts[Math.min(k+1,pts.length-1)];
+      const dx=pn.x-p.x,dy=pn.y-p.y,len=Math.sqrt(dx*dx+dy*dy)||1;
+      const nx=-dy/len,ny=dx/len;
+      ctx.save();ctx.translate(p.x,p.y);
+      ctx.strokeStyle='#1a2e42';ctx.lineWidth=3;
+      ctx.beginPath();ctx.moveTo(nx*4,ny*4);ctx.lineTo(nx*12,ny*12);ctx.stroke();
+      drawBolt(nx*12,ny*12,3.5);
+      ctx.restore();
+    }
+  });
+}
+
+function drawFrameRibs(){
+  // Cross-ribs / stiffeners along straight sections
+  const ribStep=Math.floor(bandPath.length/18);
+  for(let i=ribStep;i<bandPath.length-ribStep;i+=ribStep){
+    const p=bandPath[i];
+    const p2=bandPath[Math.min(i+3,bandPath.length-1)];
+    const dx=p2.x-p.x,dy=p2.y-p.y,len=Math.sqrt(dx*dx+dy*dy)||1;
+    const nx=-dy/len,ny=dx/len;
+    // Cross rib plate
+    ctx.save();
+    ctx.strokeStyle='#162432';ctx.lineWidth=10;ctx.lineCap='butt';
+    ctx.beginPath();ctx.moveTo(p.x+nx*42,p.y+ny*42);ctx.lineTo(p.x-nx*42,p.y-ny*42);ctx.stroke();
+    ctx.strokeStyle='#1e3448';ctx.lineWidth=6;
+    ctx.beginPath();ctx.moveTo(p.x+nx*42,p.y+ny*42);ctx.lineTo(p.x-nx*42,p.y-ny*42);ctx.stroke();
+    ctx.strokeStyle='#243c54';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(p.x+nx*38,p.y+ny*38);ctx.lineTo(p.x-nx*38,p.y-ny*38);ctx.stroke();
+    // Bolts on rib ends
+    drawBolt(p.x+nx*38,p.y+ny*38,4);
+    drawBolt(p.x-nx*38,p.y-ny*38,4);
+    ctx.restore();
+  }
+}
+
+function drawConveyorLegs(){
+  // 6 legs: 2 at each end + 2 at gate zone
+  const legPositions=[
+    {idx:Math.floor(bandPath.length*0.01),label:'L1'},
+    {idx:Math.floor(bandPath.length*0.99),label:'L2'},
+    {idx:idxGate-24,label:'L3'},
+    {idx:idxGate+24,label:'L4'},
+    {idx:Math.floor(bandPath.length*0.55),label:'L5'},
+    {idx:Math.floor(bandPath.length*0.75),label:'L6'},
+  ];
+
+  legPositions.forEach(({idx,label})=>{
+    const bp=bandPath[Math.max(0,Math.min(idx,bandPath.length-1))];
+    if(!bp)return;
+    const lx=bp.x;
+    const lTop=bp.y+38;
+    const lBot=floorY+4;
+    const lMid=(lTop+lBot)/2;
+    const lh=lBot-lTop;
+
+    // ── MAIN COLUMNS (twin I-beams) ──
+    const offsets=[-9,9];
+    offsets.forEach(ox=>{
+      iBeam(lx+ox,lTop,lx+ox,lBot,5.5);
+    });
+
+    // ── DIAGONAL BRACES ──
+    // X-brace in upper half
+    const bTop=lTop+lh*.12,bBot=lTop+lh*.48;
+    ctx.save();ctx.strokeStyle='#0e1e2e';ctx.lineWidth=7;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(lx-18,bTop);ctx.lineTo(lx+18,bBot);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(lx+18,bTop);ctx.lineTo(lx-18,bBot);ctx.stroke();
+    ctx.strokeStyle='#1a3044';ctx.lineWidth=4;
+    ctx.beginPath();ctx.moveTo(lx-18,bTop);ctx.lineTo(lx+18,bBot);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(lx+18,bTop);ctx.lineTo(lx-18,bBot);ctx.stroke();
+    ctx.strokeStyle='#22405a';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(lx-18,bTop);ctx.lineTo(lx+18,bBot);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(lx+18,bTop);ctx.lineTo(lx-18,bBot);ctx.stroke();
+    ctx.restore();
+
+    // X-brace lower half
+    const bTop2=lTop+lh*.52,bBot2=lTop+lh*.88;
+    ctx.save();ctx.strokeStyle='#0e1e2e';ctx.lineWidth=7;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(lx-18,bTop2);ctx.lineTo(lx+18,bBot2);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(lx+18,bTop2);ctx.lineTo(lx-18,bBot2);ctx.stroke();
+    ctx.strokeStyle='#1a3044';ctx.lineWidth=4;
+    ctx.beginPath();ctx.moveTo(lx-18,bTop2);ctx.lineTo(lx+18,bBot2);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(lx+18,bTop2);ctx.lineTo(lx-18,bBot2);ctx.stroke();
+    ctx.strokeStyle='#22405a';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(lx-18,bTop2);ctx.lineTo(lx+18,bBot2);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(lx+18,bTop2);ctx.lineTo(lx-18,bBot2);ctx.stroke();
+    ctx.restore();
+
+    // ── HORIZONTAL GUSSET at mid ──
+    iBeam(lx-20,lMid,lx+20,lMid,4);
+    drawBolt(lx-16,lMid,3.5);drawBolt(lx+16,lMid,3.5);
+
+    // ── CONNECTION PLATE at top (welded to conveyor frame) ──
+    ctx.save();
+    ctx.shadowColor='rgba(0,0,0,.5)';ctx.shadowBlur=6;ctx.shadowOffsetY=2;
+    ctx.fillStyle=mGrad(lx-22,lTop-14,lx+22,lTop+2);
+    ctx.strokeStyle='#1e3448';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.roundRect(lx-22,lTop-14,44,16,2);ctx.fill();ctx.stroke();ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+    drawBolt(lx-16,lTop-6,3.5);drawBolt(lx,lTop-6,3.5);drawBolt(lx+16,lTop-6,3.5);
+    ctx.restore();
+
+    // ── FOOT PLATE with anchor bolts ──
+    ctx.save();
+    ctx.shadowColor='rgba(0,0,0,.6)';ctx.shadowBlur=8;ctx.shadowOffsetY=3;
+    ctx.fillStyle=mGrad(lx-26,lBot-5,lx+26,lBot+8);
+    ctx.strokeStyle='#1e3448';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.roundRect(lx-26,lBot-5,52,10,2);ctx.fill();ctx.stroke();ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+    // Concrete anchor bolts
+    [lx-20,lx-8,lx+8,lx+20].forEach(bx=>{
+      // Anchor bolt shaft going into floor
+      ctx.strokeStyle='#0e1825';ctx.lineWidth=3;
+      ctx.beginPath();ctx.moveTo(bx,lBot+5);ctx.lineTo(bx,lBot+14);ctx.stroke();
+      drawBolt(bx,lBot+5,4);
+    });
+    ctx.restore();
+
+    // ── LEVELING FOOT (adjustable screw foot) ──
+    [lx-9,lx+9].forEach(fx=>{
+      ctx.save();ctx.translate(fx,lBot+10);
+      const fg=ctx.createLinearGradient(-5,-10,5,4);
+      fg.addColorStop(0,'#1e3448');fg.addColorStop(.5,'#2a4060');fg.addColorStop(1,'#1e3448');
+      ctx.fillStyle=fg;ctx.strokeStyle='#2a4060';ctx.lineWidth=1;
+      // Thread
+      for(let k=-9;k<=2;k+=3){ctx.strokeStyle='#0e1825';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(-4,k);ctx.lineTo(4,k);ctx.stroke();}
+      ctx.fillRect(-4,-10,8,14);ctx.strokeRect(-4,-10,8,14);
+      ctx.fillStyle=mGrad(-8,2,8,6);ctx.fillRect(-8,2,16,5);ctx.strokeRect(-8,2,16,5);
+      drawBolt(0,5,4.5);
+      ctx.restore();
+    });
+
+    // ── LABEL ──
+    ctx.font='6px "Share Tech Mono"';ctx.fillStyle='#2a4a6a';ctx.textAlign='center';
+    ctx.fillText(label,lx,lBot+28);
+  });
+}
+
+function drawEdgeRollers(){
+  const step=Math.floor(bandPath.length/26);
+  const rot=bandTime*bandSpd*2.8;
+  for(let i=step;i<bandPath.length-step;i+=step){
+    const p=bandPath[i],p2=bandPath[Math.min(i+4,bandPath.length-1)];
+    const dx=p2.x-p.x,dy=p2.y-p.y,len=Math.sqrt(dx*dx+dy*dy)||1;
+    const nx=-dy/len,ny=dx/len;
+    // Small edge rollers visible from the outside
+    [-30,30].forEach(side=>{
+      ctx.save();ctx.translate(p.x+nx*side,p.y+ny*side);
+      const rg=ctx.createRadialGradient(-1.5,-1.5,0,0,0,5.5);
+      rg.addColorStop(0,'#4a6a8c');rg.addColorStop(.5,'#1a2e42');rg.addColorStop(1,'#0a1520');
+      ctx.fillStyle=rg;ctx.beginPath();ctx.arc(0,0,5.5,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#1e3450';ctx.lineWidth=1;ctx.stroke();
+      ctx.save();ctx.rotate(rot);
+      ctx.strokeStyle='#0e1c2e';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(-3.5,0);ctx.lineTo(3.5,0);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(0,-3.5);ctx.lineTo(0,3.5);ctx.stroke();
+      ctx.restore();
+      // Axle shaft visible
+      ctx.strokeStyle='#0e1825';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(nx*(-side<0?-1:1)*5.5,ny*(-side<0?-1:1)*5.5);ctx.lineTo(0,0);ctx.stroke();
+      ctx.restore();
+    });
+  }
+}
+
+function drawDrivePulleys(){
+  const rot=bandTime*bandSpd*2;
+  // Left (drive) pulley
+  const pL=bandPath[0];
+  drawRoller(pL.x,pL.y,28,rot);
+  drawMotorUnit(pL.x-52,pL.y,'L');
+  // Belt tensioner detail
+  drawTensioner(pL.x,pL.y+32,'left');
+
+  // Right (idler) pulley
+  const pR=bandPath[bandPath.length-1];
+  drawRoller(pR.x,pR.y,28,-rot);
+  drawMotorUnit(pR.x+52,pR.y,'R');
+  drawTensioner(pR.x,pR.y+32,'right');
+}
+
+function drawMotorUnit(cx,cy,side){
+  ctx.save();ctx.translate(cx,cy);
+  const fl=side==='L'?1:-1;
+  ctx.shadowColor='rgba(0,0,0,.55)';ctx.shadowBlur=10;ctx.shadowOffsetY=3;
+  // Motor body — ribbed housing
+  const mg=mGrad(-24*fl,-20,24*fl,20,'#0a1520','#162234','#1e3044');
+  ctx.fillStyle=mg;ctx.strokeStyle='#1e3448';ctx.lineWidth=2;
+  ctx.beginPath();ctx.roundRect(-24*fl,-20,48,40,5);ctx.fill();ctx.stroke();
+  ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+  // Cooling fins (horizontal ribs)
+  for(let k=0;k<6;k++){
+    ctx.fillStyle='#0c1825';ctx.fillRect(-22*fl,-17+k*6,44,4);
+    ctx.strokeStyle='#1e3448';ctx.lineWidth=.5;ctx.strokeRect(-22*fl,-17+k*6,44,4);
+  }
+  // Terminal box
+  ctx.fillStyle='#0e1c2e';ctx.strokeStyle='#1a2e42';ctx.lineWidth=1;
+  ctx.fillRect(-9*fl,-18,18,9);ctx.strokeRect(-9*fl,-18,18,9);
+  // Terminal bolts
+  [-5,0,5].forEach(tx=>drawBolt(tx*fl,-13,2));
+  // Nameplate
+  ctx.fillStyle='#0c1825';ctx.fillRect(-18*fl,2,36,12);
+  ctx.strokeStyle='#1a2e40';ctx.lineWidth=.8;ctx.strokeRect(-18*fl,2,36,12);
+  ctx.font='5px "Share Tech Mono"';ctx.fillStyle='#3a6a8a';ctx.textAlign='center';
+  ctx.fillText('MOT-'+side+' 2.2kW',0,10);
+  // Shaft coupling
+  const shg=ctx.createRadialGradient(24*fl,0,0,24*fl,0,8);
+  shg.addColorStop(0,'#4a6a8c');shg.addColorStop(1,'#0e1825');
+  ctx.fillStyle=shg;ctx.beginPath();ctx.arc(24*fl,0,8,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#2a4468';ctx.lineWidth=2;ctx.stroke();
+  drawBolt(24*fl,0,3.5);
+  // Mounting bolts on corners
+  [[-20,-16],[20,-16],[-20,16],[20,16]].forEach(([bx,by])=>drawBolt(bx*fl,by,3));
+  // Status LED
+  ctx.fillStyle=bandOn?'#00ff88':'#ff3322';ctx.shadowColor=bandOn?'#00ff88':'#ff3322';ctx.shadowBlur=7;
+  ctx.beginPath();ctx.arc(-18*fl,-10,3.5,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+  ctx.restore();
+}
+
+function drawTensioner(x,y,side){
+  // Tensioner assembly bracket
+  ctx.save();ctx.translate(x,y);
+  const sg=mGrad(-14,-8,14,18);
+  ctx.fillStyle=sg;ctx.strokeStyle='#1e3448';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.roundRect(-14,-8,28,26,3);ctx.fill();ctx.stroke();
+  // Threaded rod
+  for(let k=-6;k<=14;k+=3){ctx.strokeStyle='#0c1825';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(-5,k);ctx.lineTo(5,k);ctx.stroke();}
+  ctx.strokeStyle='#1a2e42';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,-8);ctx.lineTo(0,18);ctx.stroke();
+  drawBolt(-10,2,3.5);drawBolt(10,2,3.5);
+  drawBolt(0,16,5);
+  ctx.restore();
+}
+
+function drawCableTrays(){
+  // Cable tray running under the bottom section of the conveyor
+  const startIdx=Math.floor(bandPath.length*.24);
+  const endIdx=Math.floor(bandPath.length*.52);
+  if(startIdx>=bandPath.length||endIdx>=bandPath.length)return;
+  const p1=bandPath[startIdx],p2=bandPath[endIdx];
+  const ty=Math.max(p1.y,p2.y)+52;
+
+  ctx.save();
+  // Tray body
+  const tg=mGrad(p1.x,ty-6,p2.x,ty+12);
+  ctx.fillStyle=tg;ctx.strokeStyle='#1e3448';ctx.lineWidth=1.5;
+  ctx.fillRect(p1.x,ty-6,p2.x-p1.x,18);ctx.strokeRect(p1.x,ty-6,p2.x-p1.x,18);
+  // Tray side walls
+  ctx.strokeStyle='#22405a';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(p1.x,ty-6);ctx.lineTo(p1.x,ty+12);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(p2.x,ty-6);ctx.lineTo(p2.x,ty+12);ctx.stroke();
+  // Cables in tray
+  const cables=[
+    {col:'#1a3050',y:ty+1},
+    {col:'#3a1010',y:ty+4},
+    {col:'#101a30',y:ty+7},
+  ];
+  cables.forEach(c=>{
+    ctx.strokeStyle=c.col;ctx.lineWidth=3;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(p1.x+5,c.y);ctx.lineTo(p2.x-5,c.y);ctx.stroke();
+  });
+  // Tray mounting clamps
+  for(let x=p1.x+30;x<p2.x-30;x+=60){
+    ctx.strokeStyle='#1a2e42';ctx.lineWidth=4;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(x,ty-10);ctx.lineTo(x,ty-6);ctx.stroke();
+    drawBolt(x,ty-10,3.5);
+  }
+  ctx.restore();
+}
+
+// ════════════════════════════════════════════
+// SERVO-GATE MODULE — ultra-industrial
+// ════════════════════════════════════════════
+function drawGateModule(){
+  const gp=gatePos;
+  const ang=gate.angle;
+
+  // ── MOUNTING BEAM over conveyor ──
+  iBeam(gp.x-55,gp.y-62,gp.x+55,gp.y-62,8);
+  drawBolt(gp.x-48,gp.y-62,5);drawBolt(gp.x,gp.y-62,5);drawBolt(gp.x+48,gp.y-62,5);
+
+  // Vertical column from beam to servo
+  iBeam(gp.x,gp.y-62,gp.x,gp.y+34,6);
+
+  // ── SERVO HOUSING ──
+  ctx.save();ctx.translate(gp.x,gp.y+44);
+  ctx.shadowColor='rgba(0,0,0,.65)';ctx.shadowBlur=14;ctx.shadowOffsetY=4;
+  const shg=mGrad(-34,-24,34,24,'#0a1520','#182840','#203250');
+  ctx.fillStyle=shg;ctx.strokeStyle='#1e3448';ctx.lineWidth=2;
+  ctx.beginPath();ctx.roundRect(-34,-24,68,48,6);ctx.fill();ctx.stroke();
+  ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+  // Cooling fins on housing
+  for(let k=0;k<5;k++){ctx.fillStyle='#0e1c2e';ctx.fillRect(-28,-18+k*8,22,5);}
+  // Encoder wheel visible on side
+  ctx.save();ctx.translate(28,0);
+  ctx.fillStyle='#0c1825';ctx.strokeStyle='#1a2e42';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.arc(0,0,13,0,Math.PI*2);ctx.fill();ctx.stroke();
+  ctx.rotate(bandTime*bandSpd);
+  for(let k=0;k<16;k++){
+    const a=k*Math.PI/8;
+    ctx.fillStyle=k%2===0?'#2a4468':'#0c1825';
+    ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,12,a,a+Math.PI/8);ctx.closePath();ctx.fill();
+  }
+  drawBolt(0,0,4);
+  ctx.restore();
+  // ID plate
+  ctx.fillStyle='#0c1820';ctx.strokeStyle='#1a2e40';ctx.lineWidth=.8;
+  ctx.fillRect(-26,-22,38,10);ctx.strokeRect(-26,-22,38,10);
+  ctx.font='6px "Share Tech Mono"';ctx.fillStyle='#3a6a8a';ctx.textAlign='center';ctx.fillText('SERVO-M1 400W',5,-15);
+  // Status LEDs
+  drawLEDsmall(-26,10,gate.open?'#ff3322':'#00ff88',true);
+  drawLEDsmall(-18,10,'#00aaff',bandOn);
+  drawLEDsmall(-10,10,'#ffcc00',gate.timer>0);
+  // Corner bolts
+  [[-30,-20],[30,-20],[-30,20],[30,20]].forEach(([bx,by])=>drawBolt(bx,by,4.5));
+  ctx.restore();
+
+  // ── SERVO SHAFT DISK ──
+  ctx.save();ctx.translate(gp.x,gp.y+44);
+  const sd=ctx.createRadialGradient(-4,-4,0,0,0,14);
+  sd.addColorStop(0,'#5a7a9c');sd.addColorStop(.5,'#1e3450');sd.addColorStop(1,'#0a1520');
+  ctx.fillStyle=sd;ctx.strokeStyle='#2a4468';ctx.lineWidth=2.5;
+  ctx.shadowColor='rgba(0,0,0,.4)';ctx.shadowBlur=6;
+  ctx.beginPath();ctx.arc(0,0,14,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.shadowBlur=0;
+  // Angle marks
+  for(let k=0;k<12;k++){
+    const a=k*Math.PI/6;
+    ctx.strokeStyle=k%3===0?'#2a4468':'#162232';ctx.lineWidth=k%3===0?1.5:1;
+    ctx.beginPath();ctx.moveTo(Math.cos(a)*10,Math.sin(a)*10);ctx.lineTo(Math.cos(a)*13,Math.sin(a)*13);ctx.stroke();
+  }
+  for(let k=0;k<4;k++){const a=k*Math.PI/2;ctx.strokeStyle='#0e1825';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(Math.cos(a)*5,Math.sin(a)*5);ctx.lineTo(Math.cos(a)*12,Math.sin(a)*12);ctx.stroke();}
+  drawBolt(0,0,4.5);
+  ctx.restore();
+
+  // ── GATE ARM (deflector bar) ──
+  ctx.save();ctx.translate(gp.x,gp.y+44);ctx.rotate(-ang);
+  ctx.shadowColor='rgba(0,0,0,.5)';ctx.shadowBlur=8;ctx.shadowOffsetX=2;ctx.shadowOffsetY=2;
+  // Arm body
+  const acol=gate.open?'#ff3322':'#00ff88';
+  const ag=ctx.createLinearGradient(-5,0,-5,-56);
+  ag.addColorStop(0,gate.open?'#6a0a04':'#062010');
+  ag.addColorStop(.5,gate.open?'#cc2816':'#00cc66');
+  ag.addColorStop(1,gate.open?'#ff5544':'#22ff88');
+  ctx.strokeStyle=ag;ctx.lineWidth=10;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,-56);ctx.stroke();ctx.shadowBlur=0;
+  // Center groove detail
+  ctx.strokeStyle='rgba(0,0,0,.35)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,-5);ctx.lineTo(0,-50);ctx.stroke();
+  // End deflector plate
+  ctx.save();ctx.translate(0,-56);
+  const dpg=mGrad(-16,-6,16,6,'#12202e','#1e3450','#284060');
+  ctx.fillStyle=dpg;ctx.strokeStyle=acol;ctx.lineWidth=2;
+  ctx.shadowColor=acol+'88';ctx.shadowBlur=8;
+  ctx.beginPath();ctx.roundRect(-16,-6,32,12,4);ctx.fill();ctx.stroke();ctx.shadowBlur=0;
+  // Warning stripes on deflector
+  ctx.save();ctx.beginPath();ctx.roundRect(-16,-6,32,12,4);ctx.clip();
+  for(let k=-16;k<32;k+=8){
+    ctx.fillStyle=gate.open?'rgba(255,51,34,.35)':'rgba(0,255,136,.2)';
+    ctx.fillRect(k,-6,4,12);
+  }
+  ctx.restore();
+  drawBolt(-11,0,3);drawBolt(11,0,3);
+  ctx.restore();
+  ctx.restore();
+
+  // ── CONDUIT CABLES from servo housing ──
+  pipe(gp.x+34,gp.y+58,gp.x+65,gp.y+92,4,'#1a304c');
+  pipe(gp.x-34,gp.y+58,gp.x-65,gp.y+92,4,'#1a304c');
+  // Cable junction boxes
+  [gp.x+65,gp.x-65].forEach(cx=>{
+    ctx.save();ctx.translate(cx,gp.y+92);
+    ctx.fillStyle='#0e1c2e';ctx.strokeStyle='#1a2e42';ctx.lineWidth=1;
+    ctx.beginPath();ctx.roundRect(-7,-5,14,10,2);ctx.fill();ctx.stroke();
+    drawBolt(-4,0,2.5);drawBolt(4,0,2.5);
+    ctx.restore();
+  });
+
+  // ── DETECTION ZONE INDICATOR ──
+  ctx.save();
+  ctx.strokeStyle=gate.open?'rgba(255,51,34,.22)':'rgba(0,255,136,.1)';
+  ctx.lineWidth=1.5;ctx.setLineDash([3,6]);
+  ctx.beginPath();ctx.arc(gp.x,gp.y,60,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+  ctx.restore();
+
+  // Labels
+  ctx.font='bold 8px "Share Tech Mono"';ctx.textAlign='center';
+  ctx.fillStyle='#cc6644';ctx.shadowColor='rgba(200,80,40,.4)';ctx.shadowBlur=5;
+  ctx.fillText('⚙ SERVO-COMPUERTA M1',gp.x,gp.y-78);
+  ctx.shadowBlur=0;ctx.font='7px "Share Tech Mono"';
+  ctx.fillStyle='#aa6633';ctx.fillText('◆ INSPECCIÓN DE FORMA',gp.x,gp.y-68);
+  ctx.fillStyle=gate.open?'#ff3322':'#00ff88';
+  ctx.fillText(gate.open?'● ABIERTA':'● CERRADA',gp.x,gp.y-58);
+}
+
+function drawLEDsmall(x,y,col,on){
+  ctx.save();ctx.translate(x,y);
+  ctx.beginPath();ctx.arc(0,0,3.5,0,Math.PI*2);
+  ctx.fillStyle=on?col:'#0e1825';
+  if(on){ctx.shadowColor=col;ctx.shadowBlur=7;}
+  ctx.fill();ctx.shadowBlur=0;ctx.restore();
+}
+
+// ════════════════════════════════════════════
+// COLOR SENSOR MODULE — photoelectric, industrial
+// ════════════════════════════════════════════
+function drawColorSensor(){
+  const sp=sensorPos;
+
+  // ── OVERHEAD MOUNTING GANTRY ──
+  iBeam(sp.x-8,sp.y-78,sp.x+80,sp.y-78,7);
+  drawBolt(sp.x,sp.y-78,5);drawBolt(sp.x+72,sp.y-78,5);
+
+  // Vertical drop arm
+  pipe(sp.x+65,sp.y-78,sp.x+65,sp.y-32,5,'#162030');
+  drawBolt(sp.x+65,sp.y-78,4);drawBolt(sp.x+65,sp.y-34,4);
+
+  // ── SENSOR HEAD (cylindrical photoelectric) ──
+  ctx.save();ctx.translate(sp.x+65,sp.y-32);ctx.rotate(-0.38);
+  const cH=48,cW=17;
+  // Housing body
+  const cg=mGrad(-cW/2,-cH/2,cW/2,cH/2,'#0a1520','#162234','#1e3248');
+  ctx.fillStyle=cg;ctx.strokeStyle='#1e3448';ctx.lineWidth=2;
+  ctx.shadowColor='rgba(0,0,0,.55)';ctx.shadowBlur=9;
+  ctx.beginPath();ctx.roundRect(-cW/2,-cH/2,cW,cH,cW/2);ctx.fill();ctx.stroke();ctx.shadowBlur=0;
+  // Body knurling rings
+  for(let k=-cH/2+4;k<cH/2-4;k+=5){ctx.strokeStyle='#0c1825';ctx.lineWidth=1;ctx.beginPath();ctx.arc(0,k,cW/2-2,0,Math.PI*2);ctx.stroke();}
+  // Lens (front emitter)
+  const lg=ctx.createRadialGradient(-2,-cH/2+7,0,0,-cH/2+9,8);
+  lg.addColorStop(0,'rgba(255,255,255,.9)');lg.addColorStop(.2,'#aaddff');lg.addColorStop(.5,'#4499ff');lg.addColorStop(.8,'#2266cc');lg.addColorStop(1,'#001133');
+  ctx.fillStyle=lg;ctx.shadowColor='#00aaff';ctx.shadowBlur=16;
+  ctx.beginPath();ctx.arc(0,-cH/2+9,cW/2-2.5,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+  // Lens bezel ring
+  ctx.strokeStyle='#3a5a7a';ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(0,-cH/2+9,cW/2-2,0,Math.PI*2);ctx.stroke();
+  // Status indicator LED
+  ctx.fillStyle='#00aaff';ctx.shadowColor='#00aaff';ctx.shadowBlur=9;
+  ctx.beginPath();ctx.arc(0,0,4.5,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+  // Trim pot
+  drawBolt(cW/2-3,cH/4,3.5);
+  // Cable exit gland
+  ctx.fillStyle='#162030';ctx.strokeStyle='#1a2e42';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.arc(0,cH/2-4,5,0,Math.PI*2);ctx.fill();ctx.stroke();
+  // Label
+  ctx.font='5px "Share Tech Mono"';ctx.fillStyle='#3a6a8a';ctx.textAlign='center';
+  ctx.fillText('RGB-400',0,cH/2-11);
+  ctx.restore();
+
+  // ── SIGNAL CABLE from sensor ──
+  pipe(sp.x+65,sp.y-22,sp.x+110,sp.y-52,3.5,'#1a3050');
+  // ── CONTROL UNIT BOX ──
+  ctx.save();ctx.translate(sp.x+112,sp.y-62);
+  drawMetalBox2(-32,-26,64,52);
+  ctx.font='6px "Share Tech Mono"';ctx.fillStyle='#3a6a8a';ctx.textAlign='center';ctx.fillText('CTRL UNIT',0,-12);
+  // 7-seg style display
+  ctx.fillStyle='#060f0a';ctx.fillRect(-28,-24,56,14);
+  ctx.strokeStyle='#0e2018';ctx.lineWidth=1;ctx.strokeRect(-28,-24,56,14);
+  ctx.font='7px "Share Tech Mono"';ctx.fillStyle='#00ff88';ctx.fillText('DETECT OK',0,-14);
+  // RGB indicator dots
+  [{c:'#ff3322',x:-18},{c:'#00ff88',x:-6},{c:'#0044ff',x:6},{c:'#ffcc00',x:18}].forEach(d=>{
+    ctx.fillStyle=d.c;ctx.shadowColor=d.c;ctx.shadowBlur=6;
+    ctx.beginPath();ctx.arc(d.x,4,4,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+  });
+  ctx.font='5px monospace';ctx.fillStyle='#3a6a8a';ctx.textAlign='center';
+  ['R','G','B','W'].forEach((l,i)=>ctx.fillText(l,-18+i*12,12));
+  ctx.restore();
+
+  // ── EMITTER BEAM (visual detection beam) ──
+  ctx.save();
+  ctx.strokeStyle='rgba(0,170,255,.18)';ctx.lineWidth=2;ctx.setLineDash([2,5]);
+  ctx.beginPath();ctx.moveTo(sp.x+58,sp.y-38);ctx.lineTo(sp.x-22,sp.y);ctx.stroke();ctx.setLineDash([]);
+  // Retroreflector on opposite side
+  ctx.save();ctx.translate(sp.x-22,sp.y);
+  ctx.fillStyle='#0e1825';ctx.strokeStyle='#1e3448';ctx.lineWidth=2;
+  ctx.beginPath();ctx.arc(0,0,9,0,Math.PI*2);ctx.fill();ctx.stroke();
+  // Reflector prism pattern
+  for(let k=0;k<6;k++){const a=k*Math.PI/3;ctx.strokeStyle='#1a2e42';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(Math.cos(a)*3,Math.sin(a)*3);ctx.lineTo(Math.cos(a)*7,Math.sin(a)*7);ctx.stroke();}
+  ctx.fillStyle='rgba(0,170,255,.12)';ctx.beginPath();ctx.arc(0,0,9,0,Math.PI*2);ctx.fill();
+  drawBolt(0,0,3);
+  // Mounting bracket
+  iBeam(0,-9,0,-22,4);
+  drawBolt(0,-20,3.5);
+  ctx.restore();
+  ctx.restore();
+
+  // Labels
+  ctx.font='bold 8px "Share Tech Mono"';ctx.textAlign='left';
+  ctx.fillStyle='#aa66ee';ctx.shadowColor='rgba(170,100,255,.4)';ctx.shadowBlur=5;
+  ctx.fillText('◈ SENSOR RGB FOTOELÉCTRICO',sp.x+18,sp.y-46);
+  ctx.shadowBlur=0;ctx.font='7px "Share Tech Mono"';ctx.fillStyle='#7744aa';
+  ctx.fillText('◆ CLASIFICACIÓN POR COLOR',sp.x+18,sp.y-37);
+}
+
+function drawMetalBox2(bx,by,bw,bh){
+  ctx.shadowColor='rgba(0,0,0,.5)';ctx.shadowBlur=8;ctx.shadowOffsetY=2;
+  ctx.fillStyle=mGrad(bx,by,bx+bw,by+bh);ctx.strokeStyle='#1e3448';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.roundRect(bx,by,bw,bh,3);ctx.fill();ctx.stroke();
+  ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+  [[bx+6,by+6],[bx+bw-6,by+6],[bx+6,by+bh-6],[bx+bw-6,by+bh-6]].forEach(([px,py])=>drawBolt(px,py,3.5));
+}
+
+// ════════════════════════════════════════════
+// INDUSTRIAL BINS
+// ════════════════════════════════════════════
+function drawBins(){
+  [binRed,binBlue,binYel].forEach(b=>{
+    const bw=84,bh=68;
+    const bx=b.x-bw/2,by=b.y-bh/2;
+    ctx.save();
+    ctx.shadowColor='rgba(0,0,0,.65)';ctx.shadowBlur=18;ctx.shadowOffsetY=5;
+    // Container body
+    const bg=mGrad(bx,by,bx+bw,by+bh,'#08111c','#0e1c2e','#08111c');
+    ctx.fillStyle=bg;ctx.strokeStyle='#1a2e42';ctx.lineWidth=2;
+    ctx.beginPath();ctx.roundRect(bx,by,bw,bh,4);ctx.fill();ctx.stroke();
+    ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+    // Color fill tint
+    ctx.fillStyle=b.color+'18';ctx.beginPath();ctx.roundRect(bx+3,by+3,bw-6,bh-6,3);ctx.fill();
+    // Neon border glow
+    ctx.strokeStyle=b.color;ctx.lineWidth=2;ctx.shadowColor=b.glow+'88';ctx.shadowBlur=12;
+    ctx.beginPath();ctx.roundRect(bx+3,by+3,bw-6,bh-6,3);ctx.stroke();ctx.shadowBlur=0;
+    // Lid
+    ctx.shadowColor='rgba(0,0,0,.5)';ctx.shadowBlur=8;ctx.shadowOffsetY=2;
+    const ldg=mGrad(bx-4,by-26,bx+bw+4,by-4,'#200a3a','#3c1472','#200a3a');
+    ctx.fillStyle=ldg;ctx.strokeStyle='#9944ee';ctx.lineWidth=2;
+    ctx.shadowColor='rgba(150,80,255,.35)';ctx.shadowBlur=8;
+    ctx.beginPath();ctx.roundRect(bx-4,by-26,bw+8,26,5);ctx.fill();ctx.stroke();
+    ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+    // Lid bolts & label
+    [bx+6,bx+bw-6].forEach(lx=>drawBolt(lx,by-13,4));
+    ctx.font='bold 8px "Share Tech Mono"';ctx.fillStyle='#ddc0ff';ctx.textAlign='center';
+    ctx.fillText('BIN-'+b.label,b.x,by-10);
+    // Color indicator
+    ctx.fillStyle=b.color;ctx.shadowColor=b.glow;ctx.shadowBlur=14;
+    ctx.beginPath();ctx.arc(b.x,by-10,9,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+    // Count
+    const cnt=parseInt(document.getElementById(b.id)?.textContent||'0');
+    ctx.font=`bold ${cnt>9?15:19}px "Share Tech Mono"`;
+    ctx.fillStyle=b.color;ctx.shadowColor=b.glow;ctx.shadowBlur=7;
+    ctx.textAlign='center';ctx.fillText(cnt,b.x,by+bh-10);ctx.shadowBlur=0;
+    // Side ribs
+    [by+16,by+bh-16].forEach(ly=>{
+      drawBolt(bx+6,ly,3);drawBolt(bx+bw-6,ly,3);
+    });
+    // LED strip on lid
+    for(let k=0;k<5;k++){
+      drawLEDsmall(bx+14+k*(bw-28)/4-b.x,by-4-b.y,b.color,k%2===0);
+    }
+    // Dashed cable to arm
+    ctx.strokeStyle=b.color+'28';ctx.lineWidth=1.5;ctx.setLineDash([2,7]);
+    ctx.beginPath();ctx.moveTo(b.x,by+bh);ctx.bezierCurveTo(b.x,by+bh+32,armBX,armBY-55,armBX,armBY-22);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  });
+}
+
+// ════════════════════════════════════════════
+// ROBOTIC ARM — ultra-industrial 6-axis
+// ════════════════════════════════════════════
+function ikArm(tx,ty){
+  const dx=tx-armBX,dy=armBY-ty;
+  const d=Math.min(Math.sqrt(dx*dx+dy*dy),AL1+AL2-2);
+  const base=Math.atan2(dy,dx);
+  const cA=(AL1*AL1+d*d-AL2*AL2)/(2*AL1*d);
+  const A=Math.acos(Math.max(-1,Math.min(1,cA)));
+  const cB=(AL1*AL1+AL2*AL2-d*d)/(2*AL1*AL2);
+  const B=Math.acos(Math.max(-1,Math.min(1,cB)));
+  return{a1:base+A,elb:Math.PI-B};
+}
+function armTip(){
+  const bx=armBX+Math.cos(arm.a1)*AL1,by=armBY-Math.sin(arm.a1)*AL1;
+  const a2=arm.a1-arm.elb;
+  return{x1:bx,y1:by,x2:bx+Math.cos(a2)*AL2,y2:by-Math.sin(a2)*AL2,a2};
+}
+function lerpA(a,b,t){let d=b-a;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;return a+d*t;}
+
+function drawRoboticArm(){
+  const{x1,y1,x2,y2,a2}=armTip();
+
+  // ── PEDESTAL & BASE ──
+  ctx.save();
+  // Concrete mounting pad
+  ctx.shadowColor='rgba(0,0,0,.7)';ctx.shadowBlur=14;ctx.shadowOffsetY=4;
+  ctx.fillStyle=mGrad(armBX-44,armBY+20,armBX+44,armBY+34,'#0a1520','#162234','#1e3044');
+  ctx.strokeStyle='#1e3448';ctx.lineWidth=2;
+  ctx.beginPath();ctx.roundRect(armBX-44,armBY+20,88,16,3);ctx.fill();ctx.stroke();
+  ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+  // Pad anchor bolts
+  [armBX-36,armBX-20,armBX,armBX+20,armBX+36].forEach(bx=>drawBolt(bx,armBY+28,4.5));
+
+  // Pedestal body
+  const pg=mGrad(armBX-18,armBY-6,armBX+18,armBY+20,'#0a1520','#162234','#1e3248');
+  ctx.fillStyle=pg;ctx.strokeStyle='#1e3448';ctx.lineWidth=2;
+  ctx.shadowColor='rgba(0,0,0,.5)';ctx.shadowBlur=10;
+  ctx.fillRect(armBX-18,armBY-6,36,30);ctx.strokeRect(armBX-18,armBY-6,36,30);ctx.shadowBlur=0;
+  // Pedestal ribs
+  for(let k=0;k<4;k++){ctx.fillStyle='#0c1825';ctx.fillRect(armBX-16,armBY-4+k*7,32,4);}
+  // Rotary joint ring J0
+  const j0g=ctx.createRadialGradient(armBX-6,armBY-6,0,armBX,armBY,28);
+  j0g.addColorStop(0,'#4a6a8c');j0g.addColorStop(.4,'#1e3450');j0g.addColorStop(1,'#0a1520');
+  ctx.fillStyle=j0g;ctx.strokeStyle='#2a4468';ctx.lineWidth=3;
+  ctx.shadowColor='rgba(0,150,255,.25)';ctx.shadowBlur=12;
+  ctx.beginPath();ctx.arc(armBX,armBY,28,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.shadowBlur=0;
+  // Angular encoder marks on J0
+  for(let k=0;k<24;k++){
+    const a=k*Math.PI/12;
+    const r1=22,r2=k%6===0?27:k%3===0?25:24;
+    ctx.strokeStyle=k%6===0?'#2a4468':k%3===0?'#1e3450':'#141f2e';ctx.lineWidth=k%6===0?1.5:1;
+    ctx.beginPath();ctx.moveTo(armBX+Math.cos(a)*r1,armBY+Math.sin(a)*r1);ctx.lineTo(armBX+Math.cos(a)*r2,armBY+Math.sin(a)*r2);ctx.stroke();
+  }
+  // J1 servo housing
+  const j1g=mGrad(armBX-12,armBY-12,armBX+12,armBY+12,'#0a1520','#162234','#1e3248');
+  ctx.fillStyle=j1g;ctx.strokeStyle='#1e3448';ctx.lineWidth=2;
+  ctx.beginPath();ctx.arc(armBX,armBY,16,0,Math.PI*2);ctx.fill();ctx.stroke();
+  [0,Math.PI/2,Math.PI,Math.PI*1.5].forEach(a=>{
+    drawBolt(armBX+Math.cos(a)*22,armBY+Math.sin(a)*22,4.5);
+  });
+  drawLEDsmall(armBX+20,armBY-20,armOn?'#00ff88':'#ff3322',true);
+  ctx.restore();
+
+  if(!armOn)return;
+
+  // ── LINK 1 (upper arm — green housing) ──
+  ctx.save();ctx.lineCap='round';
+  // Shadow
+  ctx.strokeStyle='rgba(0,0,0,.5)';ctx.lineWidth=24;
+  ctx.beginPath();ctx.moveTo(armBX+2,armBY+2);ctx.lineTo(x1+2,y1+2);ctx.stroke();
+  // Outer casing
+  const l1g=ctx.createLinearGradient(armBX,armBY,x1,y1);
+  l1g.addColorStop(0,'#061508');l1g.addColorStop(.2,'#0e2e14');l1g.addColorStop(.5,'#1a5c28');l1g.addColorStop(.8,'#0e2e14');l1g.addColorStop(1,'#061508');
+  ctx.strokeStyle=l1g;ctx.lineWidth=20;
+  ctx.shadowColor='rgba(26,90,40,.25)';ctx.shadowBlur=8;
+  ctx.beginPath();ctx.moveTo(armBX,armBY);ctx.lineTo(x1,y1);ctx.stroke();ctx.shadowBlur=0;
+  // Casing ribs (darker bands every ~20px)
+  const l1len=Math.sqrt((x1-armBX)**2+(y1-armBY)**2);
+  const l1dx=(x1-armBX)/l1len,l1dy=(y1-armBY)/l1len;
+  const ribCount=Math.floor(l1len/22);
+  for(let k=1;k<ribCount;k++){
+    const rx=armBX+l1dx*k*22,ry=armBY+l1dy*k*22;
+    ctx.save();ctx.strokeStyle='#0a1e0e';ctx.lineWidth=2;
+    const nx=-l1dy,ny=l1dx;
+    ctx.beginPath();ctx.moveTo(rx+nx*10,ry+ny*10);ctx.lineTo(rx-nx*10,ry-ny*10);ctx.stroke();
+    ctx.restore();
+  }
+  // Highlight seam
+  ctx.strokeStyle='rgba(60,180,80,.14)';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(armBX,armBY);ctx.lineTo(x1,y1);ctx.stroke();
+  // Cable harness along arm
+  const ca1=arm.a1+Math.PI/2;
+  ctx.strokeStyle='#0e1825';ctx.lineWidth=3.5;
+  ctx.beginPath();ctx.moveTo(armBX+Math.cos(ca1)*10,armBY+Math.sin(ca1)*10);ctx.lineTo(x1+Math.cos(ca1)*10,y1+Math.sin(ca1)*10);ctx.stroke();
+  ctx.strokeStyle='#3a0808';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(armBX+Math.cos(ca1)*10,armBY+Math.sin(ca1)*10);ctx.lineTo(x1+Math.cos(ca1)*10,y1+Math.sin(ca1)*10);ctx.stroke();
+  ctx.restore();
+
+  // ── J2 ELBOW JOINT ──
+  ctx.save();
+  const eg=ctx.createRadialGradient(x1-4,y1-4,0,x1,y1,16);
+  eg.addColorStop(0,'#6a9aac');eg.addColorStop(.4,'#1e3a5a');eg.addColorStop(1,'#0a1520');
+  ctx.fillStyle=eg;ctx.strokeStyle='#2a4468';ctx.lineWidth=3;
+  ctx.shadowColor='rgba(0,160,255,.3)';ctx.shadowBlur=10;
+  ctx.beginPath();ctx.arc(x1,y1,16,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.shadowBlur=0;
+  // Encoder ring on elbow
+  ctx.strokeStyle='#0e1825';ctx.lineWidth=1;ctx.setLineDash([2,4]);
+  ctx.beginPath();ctx.arc(x1,y1,20,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);
+  for(let k=0;k<8;k++){const a=k*Math.PI/4;ctx.strokeStyle='#162232';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(x1+Math.cos(a)*13,y1+Math.sin(a)*13);ctx.lineTo(x1+Math.cos(a)*16,y1+Math.sin(a)*16);ctx.stroke();}
+  drawBolt(x1,y1,5.5);
+  ctx.restore();
+
+  // ── LINK 2 (forearm — red housing) ──
+  ctx.save();ctx.lineCap='round';
+  ctx.strokeStyle='rgba(0,0,0,.45)';ctx.lineWidth=19;
+  ctx.beginPath();ctx.moveTo(x1+2,y1+2);ctx.lineTo(x2+2,y2+2);ctx.stroke();
+  const l2g=ctx.createLinearGradient(x1,y1,x2,y2);
+  l2g.addColorStop(0,'#1e0506');l2g.addColorStop(.2,'#3a0a0c');l2g.addColorStop(.5,'#6e1416');l2g.addColorStop(.8,'#3a0a0c');l2g.addColorStop(1,'#1e0506');
+  ctx.strokeStyle=l2g;ctx.lineWidth=15;
+  ctx.shadowColor='rgba(110,20,22,.25)';ctx.shadowBlur=7;
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.shadowBlur=0;
+  // Ribs on forearm
+  const l2len=Math.sqrt((x2-x1)**2+(y2-y1)**2);
+  const l2dx=(x2-x1)/l2len,l2dy=(y2-y1)/l2len;
+  const ribC2=Math.floor(l2len/20);
+  for(let k=1;k<ribC2;k++){
+    const rx=x1+l2dx*k*20,ry=y1+l2dy*k*20;
+    ctx.save();ctx.strokeStyle='#220808';ctx.lineWidth=2;
+    const nx=-l2dy,ny=l2dx;
+    ctx.beginPath();ctx.moveTo(rx+nx*8,ry+ny*8);ctx.lineTo(rx-nx*8,ry-ny*8);ctx.stroke();
+    ctx.restore();
+  }
+  ctx.strokeStyle='rgba(200,80,80,.12)';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  // Cable harness
+  const ca2=a2+Math.PI/2;
+  ctx.strokeStyle='#0e1825';ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(x1+Math.cos(ca2)*8,y1+Math.sin(ca2)*8);ctx.lineTo(x2+Math.cos(ca2)*8,y2+Math.sin(ca2)*8);ctx.stroke();
+  ctx.restore();
+
+  // ── J3 WRIST JOINT ──
+  ctx.save();
+  const wg=ctx.createRadialGradient(x2-3,y2-3,0,x2,y2,12);
+  wg.addColorStop(0,'#5a8a9c');wg.addColorStop(.4,'#1e3c5a');wg.addColorStop(1,'#0a1520');
+  ctx.fillStyle=wg;ctx.strokeStyle='#2a4468';ctx.lineWidth=2.5;
+  ctx.shadowColor='rgba(0,160,255,.28)';ctx.shadowBlur=8;
+  ctx.beginPath();ctx.arc(x2,y2,12,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.shadowBlur=0;
+  drawBolt(x2,y2,4.5);
+  ctx.restore();
+
+  // ── END EFFECTOR (pneumatic parallel gripper) ──
+  ctx.save();ctx.translate(x2,y2);ctx.rotate(a2-Math.PI/2);
+  // Adapter flange
+  ctx.shadowColor='rgba(0,0,0,.5)';ctx.shadowBlur=8;ctx.shadowOffsetY=2;
+  ctx.fillStyle=mGrad(-12,-10,12,10,'#0a1520','#162234','#1e3248');
+  ctx.strokeStyle='#1e3448';ctx.lineWidth=2;
+  ctx.beginPath();ctx.roundRect(-12,-10,24,8,2);ctx.fill();ctx.stroke();
+  drawBolt(-8,-6,2.5);drawBolt(8,-6,2.5);
+  // Pneumatic body
+  const gbg=mGrad(-11,-3,11,26,'#0a1520','#162234','#1e3248');
+  ctx.fillStyle=gbg;ctx.strokeStyle='#1e3448';ctx.lineWidth=2;
+  ctx.shadowColor='rgba(0,0,0,.5)';ctx.shadowBlur=6;
+  ctx.beginPath();ctx.roundRect(-11,-3,22,26,4);ctx.fill();ctx.stroke();ctx.shadowBlur=0;
+  // Air inlet ports
+  [{x:-11,y:4},{x:11,y:4}].forEach(p=>{
+    ctx.fillStyle='#4a6a8c';ctx.strokeStyle='#2a4468';ctx.lineWidth=1;
+    ctx.beginPath();ctx.arc(p.x,p.y,3.5,0,Math.PI*2);ctx.fill();ctx.stroke();
+  });
+  // Pneumatic cylinder top
+  ctx.fillStyle='#0e1c2e';ctx.fillRect(-9,-3,18,9);
+  ctx.strokeStyle='#1a2e42';ctx.lineWidth=1;ctx.strokeRect(-9,-3,18,9);
+  // T-slot rail guide
+  ctx.fillStyle='#0a1520';ctx.fillRect(-10,6,20,3);
+  // Fingers
+  const gs=arm.grip?3.5:12;
+  const fcol=arm.grip?'#ffcc00':'#3a6a9a';
+  const fglow=arm.grip?'rgba(255,200,0,.55)':'rgba(58,106,154,.4)';
+  [-1,1].forEach(side=>{
+    const fx=side*gs;
+    // Finger body
+    ctx.shadowColor='rgba(0,0,0,.4)';ctx.shadowBlur=5;
+    ctx.fillStyle=mGrad(fx-5,9,fx+5,32,'#0a1520','#162234','#1e3248');
+    ctx.strokeStyle='#1a2e42';ctx.lineWidth=1.5;
+    ctx.fillRect(fx-5,9,10,22);ctx.strokeRect(fx-5,9,10,22);ctx.shadowBlur=0;
+    // Finger grooves (anti-slip)
+    for(let k=0;k<4;k++){ctx.strokeStyle='#0a1520';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(fx-4,11+k*4);ctx.lineTo(fx+4,11+k*4);ctx.stroke();}
+    // Rubber tip
+    ctx.fillStyle=fcol;ctx.strokeStyle=fglow;ctx.lineWidth=2;
+    ctx.shadowColor=fglow;ctx.shadowBlur=arm.grip?14:5;
+    ctx.beginPath();ctx.roundRect(fx-6,30,12,8,2);ctx.fill();ctx.stroke();ctx.shadowBlur=0;
+    // Tip padding grooves
+    ctx.strokeStyle='rgba(0,0,0,.3)';ctx.lineWidth=1;
+    for(let k=0;k<3;k++){ctx.beginPath();ctx.moveTo(fx-4,31+k*2.5);ctx.lineTo(fx+4,31+k*2.5);ctx.stroke();}
+  });
+  // Force / torque sensor plate (between fingers)
+  ctx.fillStyle='#0c1e0c';ctx.strokeStyle='rgba(0,255,100,.2)';ctx.lineWidth=1;
+  ctx.fillRect(-2,10,4,7);ctx.strokeRect(-2,10,4,7);
+  // Status LED on gripper
+  drawLEDsmall(0,-7,arm.grip?'#ffcc00':'#00aaff',true);
+  // Corner bolts on body
+  [[-8,2],[8,2],[-8,22],[8,22]].forEach(([bx,by])=>drawBolt(bx,by,2.5));
+  ctx.restore();
+
+  // Held figure
+  if(arm.held)drawFig(x2,y2,arm.held.rot,arm.held.shape,arm.held.sz,arm.held.color,false);
+}
+
+// ════════════════════════════════════════════
+// BACKGROUND
+// ════════════════════════════════════════════
+function drawBG(){
+  ctx.fillStyle='#060a0f';ctx.fillRect(0,0,W,H);
+  // Grid
+  ctx.strokeStyle='rgba(0,55,90,.12)';ctx.lineWidth=.5;
+  for(let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  // Floor
+  const fg=ctx.createLinearGradient(0,floorY,0,H);
+  fg.addColorStop(0,'rgba(18,38,58,.75)');fg.addColorStop(.25,'rgba(12,22,36,.85)');fg.addColorStop(1,'rgba(6,10,15,1)');
+  ctx.fillStyle=fg;ctx.fillRect(0,floorY,W,H-floorY);
+  // Floor seam line
+  ctx.strokeStyle='rgba(0,150,220,.18)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(0,floorY);ctx.lineTo(W,floorY);ctx.stroke();
+  // Floor tiles
+  ctx.strokeStyle='rgba(0,55,90,.18)';ctx.lineWidth=.6;
+  const tw=80;
+  for(let x=0;x<W;x+=tw){ctx.beginPath();ctx.moveTo(x,floorY);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=floorY;y<H;y+=tw){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  // Hazard stripes
+  ctx.save();ctx.beginPath();ctx.rect(0,floorY,W,H-floorY);ctx.clip();
+  for(let x=-H;x<W+H;x+=30){
+    ctx.fillStyle='rgba(255,200,0,.035)';
+    ctx.beginPath();ctx.moveTo(x,floorY);ctx.lineTo(x+20,floorY);ctx.lineTo(x+20+H,H);ctx.lineTo(x+H,H);ctx.closePath();ctx.fill();
+  }
+  ctx.restore();
+  // Ceiling/top ambient
+  const cg=ctx.createLinearGradient(0,0,0,yTop-50);
+  cg.addColorStop(0,'rgba(0,28,50,.5)');cg.addColorStop(1,'transparent');
+  ctx.fillStyle=cg;ctx.fillRect(0,0,W,yTop-50);
+  // Overhead work lights (2 lamps)
+  [W*.35,W*.65].forEach(lx=>{
+    const lg=ctx.createRadialGradient(lx,0,0,lx,0,180);
+    lg.addColorStop(0,'rgba(0,100,180,.07)');lg.addColorStop(.6,'rgba(0,50,100,.03)');lg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=lg;ctx.fillRect(0,0,W,180);
+    // Lamp fixture
+    ctx.save();ctx.translate(lx,0);
+    ctx.fillStyle='#1e3448';ctx.fillRect(-14,0,28,8);
+    ctx.strokeStyle='#2a4468';ctx.lineWidth=1;ctx.strokeRect(-14,0,28,8);
+    drawBolt(-10,4,3);drawBolt(10,4,3);
+    ctx.restore();
+  });
+}
+
+// ════════════════════════════════════════════
+// LOGIC
+// ════════════════════════════════════════════
+function updateArm(dt){
+  if(!armOn)return;
+  const s=Math.min(dt*5.5,.28);
+  arm.a1=lerpA(arm.a1,arm.ta1,s);
+  arm.elb+=(arm.telb-arm.elb)*s;
+  arm.timer-=dt;
+  if(arm.phase==='idle'){
+    const ik0=ikArm(armBX,armBY-AL1*.75);arm.ta1=ik0.a1;arm.telb=ik0.elb;
+    for(const f of figs){
+      if(f.held||f.classified||f.ejected||f.done||f.deformed)continue;
+      if(f.colorOk)continue;
+      if(f.getIdx()>=idxSensor){f.colorOk=true;doClassify(f);return;}
+    }
+  } else if(arm.phase==='reach'){
+    if(arm.timer<=0){arm.grip=true;arm.phase='lift';arm.timer=0.2;setSt('AGARRE');}
+  } else if(arm.phase==='lift'){
+    if(arm.timer<=0){
+      const ik2=ikArm(arm.destBin.x,arm.destBin.y+16);
+      arm.ta1=ik2.a1;arm.telb=ik2.elb;arm.phase='swing';arm.timer=0.95;setSt('TRANSFER');
+    }
+  } else if(arm.phase==='swing'){
+    if(arm.timer<=0){arm.phase='drop';arm.timer=0.22;setSt('DEPÓSITO');}
+  } else if(arm.phase==='drop'){
+    if(arm.timer<=0){
+      if(arm.held){
+        arm.held.classified=true;arm.held.held=false;
+        const p=arm.held.primary;
+        if(p==='red'){cR++;setE('cR',cR);}else if(p==='blue'){cBl++;setE('cBl',cBl);}else{cY++;setE('cY',cY);}
+        cOk++;setE('cOk',cOk);setE('cOk2',cOk);
+        armCyc++;setE('armCyc',armCyc);arm.held=null;
+      }
+      arm.grip=false;arm.phase='back';arm.timer=0.4;
+      const ik3=ikArm(armBX,armBY-AL1*.75);arm.ta1=ik3.a1;arm.telb=ik3.elb;setSt('RETORNO');
+    }
+  } else if(arm.phase==='back'){
+    if(arm.timer<=0){arm.phase='idle';bandOn=true;setSt('REPOSO');}
+  }
+}
+
+function doClassify(f){
+  bandOn=false;arm.held=f;f.held=true;arm.destBin=binFor(f.primary);
+  const ik1=ikArm(f.getPos().x,f.getPos().y);arm.ta1=ik1.a1;arm.telb=ik1.elb;
+  arm.phase='reach';arm.timer=0.6;setSt('ALCANCE');
+  setLed('ledBrazo','y');
+  setTimeout(()=>setLed('ledBrazo','g'),2800);
+}
+
+function setSt(s){setE('armSt',s);}
+
+function updateGate(dt){
+  gate.timer-=dt;
+  if(!gate.open){
+    gate.angle+=(0-gate.angle)*Math.min(dt*6,.3);
+    for(const f of figs){
+      if(f.held||f.ejected||f.classified||f.done||f.gateOk)continue;
+      if(Math.abs(f.getIdx()-idxGate)<16){
+        f.gateOk=true;
+        if(f.deformed){openGate(f);return;}
+      }
+    }
+  } else {
+    gate.angle+=(Math.PI/2-gate.angle)*Math.min(dt*5,.25);
+    if(gate.timer<=0){
+      gate.open=false;cDef++;setE('cDef',cDef);setE('cDef2',cDef);
+      document.getElementById('alarmBar').classList.remove('show');
+      setLed('ledServo','g');
+    }
+  }
+}
+
+function openGate(f){
+  gate.open=true;gate.timer=1.6;
+  f.ejected=true;const fp=f.getPos();
+  f.ex=fp.x;f.ey=fp.y;f.evx=(Math.random()-.5)*3.5;f.evy=4.5+Math.random()*2;f.ea=1;f.erot=0;f.erotv=(Math.random()-.5)*.22;
+  document.getElementById('alarmBar').classList.add('show');
+  setLed('ledServo','r');
+  setTimeout(()=>document.getElementById('alarmBar').classList.remove('show'),2400);
+}
+
+function setLed(id,col){
+  const el=document.getElementById(id);if(!el)return;
+  const m={g:'#00ff88',r:'#ff3322',y:'#ffcc00',b:'#00aaff'};
+  el.style.background=m[col];el.style.boxShadow=`0 0 7px ${m[col]}`;
+}
+function setE(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
+
+// ════════════════════════════════════════════
+// MAIN LOOP
+// ════════════════════════════════════════════
+let lastT=0;
+function loop(ts){
+  const dt=Math.min((ts-lastT)/1000,.05);lastT=ts;
+  W=CV.width;H=CV.height;
+  ctx.clearRect(0,0,W,H);
+  drawBG();
+  if(bandOn)bandTime+=dt;
+  drawConveyor();
+  drawGateModule();
+  drawColorSensor();
+  drawBins();
+  updateGate(dt);
+  updateArm(dt);
+  figs=figs.filter(f=>{
+    if(f.ejected&&f.ea<=0)return false;
+    if(f.classified||f.done&&!f.held)return false;
+    return true;
+  });
+  figs.forEach(f=>{f.update(dt);f.draw();});
+  const active=figs.filter(f=>!f.ejected&&!f.classified).length;
+  setE('cBand',active);setE('cBand2',active);
+  drawRoboticArm();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// ════════════════════════════════════════════
+// CONTROLS
+// ════════════════════════════════════════════
+function toggleBand(){
+  bandOn=!bandOn;
+  const b=document.getElementById('btnB');
+  if(bandOn){b.textContent='▶ MARCHA';b.className='on';setLed('ledBanda','g');}
+  else{b.textContent='■ PARADA';b.className='off';setLed('ledBanda','r');}
+}
+function toggleArm(){
+  armOn=!armOn;
+  const b=document.getElementById('btnA');
+  if(armOn){b.textContent='▶ ACTIVO';b.className='on';setLed('ledBrazo','g');setSt('REPOSO');}
+  else{b.textContent='■ INACTIVO';b.className='off';setLed('ledBrazo','r');setSt('OFF');arm.phase='idle';arm.grip=false;arm.held=null;bandOn=true;}
+}
+function spawnFig(){figs.push(new Figure());}
+function resetAll(){
+  figs=[];cOk=0;cDef=0;cR=0;cBl=0;cY=0;armCyc=0;bandTime=0;
+  gate.open=false;gate.angle=0;gate.timer=0;
+  arm.phase='idle';arm.grip=false;arm.held=null;arm.ta1=Math.PI/2;arm.telb=0.45;
+  bandOn=true;runSec=0;
+  ['cOk','cOk2','cDef','cDef2','cR','cBl','cY','cBand','cBand2','armCyc'].forEach(id=>setE(id,'0'));
+  setSt('REPOSO');
+  document.getElementById('alarmBar').classList.remove('show');
+  document.getElementById('btnB').textContent='▶ MARCHA';document.getElementById('btnB').className='on';
+  setLed('ledBanda','g');setLed('ledServo','g');setLed('ledBrazo','g');
+}
+function setSpd(v){
+  bandSpd=parseFloat(v);
+  document.getElementById('spdv').textContent=parseFloat(v).toFixed(1);
+}
+
+// Auto-spawn
+setInterval(()=>{if(bandOn&&figs.filter(f=>!f.ejected&&!f.classified).length<9)spawnFig();},3800);
+setTimeout(spawnFig,200);setTimeout(spawnFig,1400);setTimeout(spawnFig,2600);
+</script>
+</body>
+</html>
